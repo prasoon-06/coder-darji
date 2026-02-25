@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coder Darji — AI Threat Detection</title>
+
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── FOLLOWUP PANEL ── */
+    .followup-panel {
+      display: none;
+      background: var(--card);
+      border: 1px solid var(--yellow);
+      border-radius: 14px;
+      padding: 1.4rem 1.5rem;
+      margin-top: 1rem;
+      box-shadow: 0 0 30px rgba(255,204,0,.08);
+      animation: chipIn .4s both;
+    }
+
+    .followup-header {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: .5rem;
+    }
+
+    .followup-icon {
+      font-size: 1.3rem;
+      color: var(--yellow);
+      text-shadow: 0 0 12px rgba(255,204,0,.6);
+    }
+
+    .followup-title {
+      font-family: var(--font-head);
+      font-size: .85rem;
+      letter-spacing: .16em;
+      color: var(--yellow);
+    }
+
+    .followup-sub {
+      font-family: var(--font-mono);
+      font-size: .78rem;
+      color: var(--txt2);
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+
+    .followup-questions {
+      display: flex;
+      flex-direction: column;
+      gap: .65rem;
+    }
+
+    .followup-q-row {
+      background: rgba(255, 204, 0, .04);
+      border: 1px solid rgba(255, 204, 0, .15);
+      border-radius: 10px;
+      padding: .75rem 1rem;
+      animation: chipIn .3s both;
+    }
+
+    .followup-q-text {
+      font-family: var(--font-mono);
+      font-size: .8rem;
+      color: var(--txt);
+      margin-bottom: .5rem;
+      line-height: 1.4;
+    }
+
+    .followup-q-options {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .followup-radio-label {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      cursor: pointer;
+      font-family: var(--font-mono);
+      font-size: .8rem;
+      color: var(--txt2);
+      transition: color .2s;
+    }
+
+    .followup-radio-label:hover {
+      color: var(--yellow);
+    }
+
+    .followup-radio-label input[type="radio"] {
+      display: none;
+    }
+
+    .followup-radio-custom {
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid var(--txt2);
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+      position: relative;
+      transition: border-color .2s;
+    }
+
+    .followup-radio-label input[type="radio"]:checked + .followup-radio-custom {
+      border-color: var(--yellow);
+      box-shadow: 0 0 8px rgba(255,204,0,.5);
+    }
+
+    .followup-radio-label input[type="radio"]:checked + .followup-radio-custom::after {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      background: var(--yellow);
+      border-radius: 50%;
+    }
+
+    .followup-radio-label input[type="radio"]:checked ~ span {
+      color: var(--yellow);
+    }
+
+    /* ── WHY THIS MESSAGE WAS FLAGGED ── */
+    .why-flagged-section {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 1.1rem 1.3rem;
+      margin-top: 1rem;
+    }
+
+    .why-flagged-section h4 {
+      font-family: var(--font-mono);
+      font-size: .75rem;
+      color: var(--txt2);
+      margin-bottom: .8rem;
+      letter-spacing: .08em;
+    }
+
+    .why-flagged-list {
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+
+    .flag-row {
+      background: rgba(255,0,85,.04);
+      border: 1px solid rgba(255,0,85,.14);
+      border-radius: 8px;
+      padding: .6rem .85rem;
+      animation: chipIn .3s both;
+    }
+
+    .flag-row-top {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      margin-bottom: .2rem;
+    }
+
+    .flag-word {
+      font-family: var(--font-head);
+      font-size: .78rem;
+      color: var(--red);
+      letter-spacing: .06em;
+    }
+
+    .flag-impact {
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      color: var(--yellow);
+    }
+
+    .flag-reason {
+      font-family: var(--font-mono);
+      font-size: .75rem;
+      color: var(--txt);
+      line-height: 1.4;
+      opacity: .85;
+    }
+
+    /* ── TIP ITEM DETAILED ── */
+    .tip-item--detailed {
+      flex-direction: column;
+      gap: .3rem;
+      padding: .8rem 1rem;
+    }
+
+    .tip-label {
+      display: flex;
+      align-items: center;
+      gap: .4rem;
+      font-family: var(--font-mono);
+      font-size: .72rem;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      font-weight: 600;
+      margin-bottom: .1rem;
+    }
+
+    .tip-body {
+      font-size: .87rem;
+      color: var(--txt);
+      line-height: 1.55;
+    }
+  </style>
+</head>
+
+<body>
+
+  <canvas id="matrixCanvas"></canvas>
+  <div class="vignette"></div>
+  <div class="scanline"></div>
+
+  <!-- BOOT OVERLAY -->
+  <div class="boot-overlay" id="bootOverlay">
+    <div class="boot-terminal" id="bootTerminal"></div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main id="mainContent" class="main-hidden">
+
+    <!-- SECTION 1: HERO -->
+    <section class="hero" id="hero">
+      <div class="hero-inner">
+        <div class="shield-pulse">
+          <svg viewBox="0 0 100 100" class="shield-svg">
+            <path d="M50 5 L90 25 L90 55 Q90 80 50 95 Q10 80 10 55 L10 25 Z" fill="none" stroke="var(--neon)" stroke-width="2" />
+            <path d="M50 15 L80 30 L80 55 Q80 73 50 85 Q20 73 20 55 L20 30 Z" fill="rgba(0,255,159,0.05)" stroke="var(--neon)" stroke-width="0.5" />
+            <text x="50" y="58" text-anchor="middle" fill="var(--neon)" font-size="28" font-family="Orbitron">CD</text>
+          </svg>
+        </div>
+
+        <h1 class="glitch" data-text="CODER DARJI">CODER DARJI</h1>
+        <p class="tagline">NEXT-GEN AI THREAT DETECTION</p>
+
+        <div class="typing-area">
+          <span class="prompt-symbol">›</span>
+          <span id="typingText" class="typing-text"></span>
+          <span class="cursor">█</span>
+        </div>
+
+        <button class="cta-btn" id="ctaBtn">
+          <span>INITIATE SCAN</span>
+          <svg class="arrow-icon" viewBox="0 0 24 24">
+            <path d="M12 5v14M5 12l7 7 7-7" />
+          </svg>
+        </button>
+
+        <div class="stats-row">
+          <div class="stat"><span class="stat-num" id="statThreats">0</span><span class="stat-lbl">Threats Neutralized</span></div>
+          <div class="stat"><span class="stat-num" id="statAccuracy">99.7</span><span class="stat-lbl">% Accuracy</span></div>
+          <div class="stat"><span class="stat-num" id="statScans">0</span><span class="stat-lbl">Total Scans</span></div>
+        </div>
+
+        <div class="scroll-hint" id="scrollHint">
+          <span>SCROLL TO BEGIN</span>
+          <div class="scroll-arrow"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 2: SCANNER -->
+    <section class="scanner-section" id="scannerSection">
+      <div class="section-header">
+        <h2 class="sec-title">MESSAGE ANALYSIS</h2>
+        <div class="sys-status"><span class="dot-live"></span> AI ENGINE ONLINE</div>
+      </div>
+
+      <div class="scanner-grid">
+        <!-- LEFT: iPhone WhatsApp Mockup -->
+        <div class="iphone-col">
+          <div class="iphone-frame">
+            <div class="iphone-notch">
+              <div class="notch-cam"></div>
+            </div>
+            <div class="iphone-status-bar">
+              <span class="sb-time">9:41</span>
+              <span class="sb-icons">
+                <svg width="16" height="12" viewBox="0 0 16 12">
+                  <rect x="0" y="4" width="3" height="8" rx=".5" fill="#fff" opacity=".4" />
+                  <rect x="4.5" y="2.5" width="3" height="9.5" rx=".5" fill="#fff" opacity=".6" />
+                  <rect x="9" y=".5" width="3" height="11.5" rx=".5" fill="#fff" opacity=".8" />
+                  <rect x="13.5" y="0" width="3" height="12" rx=".5" fill="#fff" />
+                </svg>
+                <svg width="18" height="12" viewBox="0 0 18 12" fill="none">
+                  <rect x=".5" y=".5" width="15" height="10" rx="2" stroke="#fff" />
+                  <rect x="2" y="2" width="10" height="7" rx="1" fill="var(--neon)" />
+                  <rect x="16" y="3.5" width="2" height="4" rx=".5" fill="#fff" />
+                </svg>
+              </span>
+            </div>
+
+            <div class="wa-header">
+              <div class="wa-back">‹</div>
+              <div class="wa-avatar-circle"><span>CD</span></div>
+              <div class="wa-contact-info"><strong>Coder Darji</strong><small>online</small></div>
+              <div class="wa-header-icons">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8696a0" stroke-width="1.5">
+                  <path d="M23 7V1h-6M16 8l7-7M1 17v6h6M8 16l-7 7" />
+                </svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8696a0" stroke-width="1.5">
+                  <circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" />
+                </svg>
+              </div>
+            </div>
+
+            <div class="wa-chat" id="chatBody">
+              <div class="wa-date-badge">Today</div>
+              <div class="wa-bubble incoming">
+                <p>Welcome, operator. Paste the suspicious message below and hit scan. 🛡️</p>
+                <span class="wa-time">Coder Darji · 9:41 AM</span>
+              </div>
+
+              {% if message %}
+              <div class="wa-bubble outgoing">
+                <p>{{ message }}</p>
+                <span class="wa-time">You · just now ✓✓</span>
+              </div>
+              {% if status %}
+              <div class="wa-bubble incoming">
+                <p>
+                  {% if status in ["SCAM","Likely Scam","Suspicious"] %}🚨{% else %}✅{% endif %}
+                  Analysis complete. Risk: <strong>{{ probability }}%</strong> — <strong>{{ status }}</strong>.
+                  Scroll down for full report.
+                </p>
+                <span class="wa-time">Coder Darji · just now</span>
+              </div>
+              {% endif %}
+              {% endif %}
+            </div>
+
+            <form method="POST" id="scanForm" class="wa-input-bar">
+              <div class="wa-input-left">
+                <svg class="wa-emoji" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8696a0" stroke-width="1.5">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+                  <line x1="9" y1="9" x2="9.01" y2="9" /><line x1="15" y1="9" x2="15.01" y2="9" />
+                </svg>
+                <textarea id="msgInput" name="message" rows="1" placeholder="Type a message">{{ message or "" }}</textarea>
+              </div>
+              <button class="wa-send-btn" id="scanBtn" title="Scan Message" type="submit">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M22 2L11 13" stroke="var(--bg)" stroke-width="2" stroke-linecap="round" />
+                  <path d="M22 2L15 22L11 13L2 9L22 2Z" fill="var(--bg)" stroke="var(--bg)" stroke-width="2" stroke-linejoin="round" />
+                </svg>
+              </button>
+            </form>
+
+            <div class="iphone-home-bar"></div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Gauge + Verdict -->
+        <div class="right-col">
+          <div class="gauge-panel">
+            <p class="gauge-title">THREAT LEVEL</p>
+            <div class="gauge-wrap">
+              <svg viewBox="0 0 200 200" class="gauge-svg">
+                <defs>
+                  <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#00ff9f" />
+                    <stop offset="50%" stop-color="#ffcc00" />
+                    <stop offset="100%" stop-color="#ff0055" />
+                  </linearGradient>
+                </defs>
+                <circle cx="100" cy="100" r="85" class="gauge-track" />
+                <circle cx="100" cy="100" r="85" class="gauge-bar" id="gaugeBar" />
+              </svg>
+              <div class="gauge-center">
+                <span class="gauge-num" id="gaugeNum">0</span>
+                <span class="gauge-lbl" id="gaugeLbl">STANDBY</span>
+              </div>
+            </div>
+            <div class="threat-legend">
+              <span class="legend safe">● SAFE</span>
+              <span class="legend warn">● CAUTION</span>
+              <span class="legend danger">● DANGER</span>
+            </div>
+            <div class="scan-log" id="scanLog">
+              <p class="scan-log-line dim">Awaiting input...</p>
+            </div>
+          </div>
+
+          <div class="verdict-box hidden" id="verdictBox">
+            <div class="verdict-stamp" id="verdictStamp">SAFE</div>
+            <div class="score-ring-wrap">
+              <svg viewBox="0 0 140 140" class="score-ring-svg">
+                <circle cx="70" cy="70" r="60" class="score-track" />
+                <circle cx="70" cy="70" r="60" class="score-bar" id="scoreBar" />
+              </svg>
+              <span class="score-val" id="scoreVal">0</span>
+            </div>
+            <div class="verdict-info">
+              <h2 id="verdictTitle">—</h2>
+              <p id="verdictDesc">—</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 3: AI REPORT -->
+    <section class="report-section hidden" id="reportSection">
+      <h3 class="analysis-heading">› AI ANALYSIS REPORT</h3>
+
+      <!-- Metric cards -->
+      <div class="card-grid">
+        <div class="a-card">
+          <div class="a-icon">🎯</div>
+          <h4>Scam Type</h4>
+          <p id="rScamType">—</p>
+        </div>
+        <div class="a-card">
+          <div class="a-icon">🧠</div>
+          <h4>AI Confidence</h4>
+          <p id="rConfidence">—</p>
+        </div>
+        <div class="a-card">
+          <div class="a-icon">⚡</div>
+          <h4>Severity</h4>
+          <p id="rSeverity">—</p>
+        </div>
+      </div>
+
+      <!-- ── FOLLOWUP PANEL (JS-rendered for AJAX; Jinja for server-side) ── -->
+      <div class="followup-panel" id="followupPanel">
+        {% if is_uncertain %}
+        <div class="followup-header">
+          <span class="followup-icon">⚠</span>
+          <span class="followup-title">WE'RE NOT SURE — HELP US DECIDE</span>
+        </div>
+        <p class="followup-sub">
+          ML model is uncertain ({{ probability }}%). Answer these quick questions to refine the result:
+        </p>
+        <form method="POST" id="followupForm">
+          <input type="hidden" name="message" value="{{ message }}">
+          <input type="hidden" name="followup_submitted" value="1">
+          <div class="followup-questions">
+            {% for q in followup_questions %}
+            <div class="followup-q-row" style="animation-delay: {{ loop.index0 * 0.08 }}s">
+              <div class="followup-q-text">{{ loop.index }}. {{ q.text }}</div>
+              <div class="followup-q-options">
+                <label class="followup-radio-label">
+                  <input type="radio" name="{{ q.id }}" value="yes">
+                  <span class="followup-radio-custom"></span>
+                  <span>Yes</span>
+                </label>
+                <label class="followup-radio-label">
+                  <input type="radio" name="{{ q.id }}" value="no">
+                  <span class="followup-radio-custom"></span>
+                  <span>No</span>
+                </label>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <button class="cta-btn" type="submit" style="margin-top:1.2rem;">
+            <span>REFINE ANALYSIS</span>
+            <svg class="arrow-icon" viewBox="0 0 24 24">
+              <path d="M12 5v14M5 12l7 7 7-7" />
+            </svg>
+          </button>
+        </form>
+        {% endif %}
+      </div>
+
+      <!-- Flagged keyword chips -->
+      <div class="flagged-section">
+        <h4>🔍 Flagged Keywords</h4>
+        <div class="flagged-chips" id="flaggedChips"></div>
+      </div>
+
+      <!-- ── WHY THIS MESSAGE WAS FLAGGED ── -->
+      <div class="why-flagged-section" id="whyFlaggedSection">
+        <h4>🚩 Why This Message Was Flagged</h4>
+        <div class="why-flagged-list" id="whyFlaggedList"></div>
+      </div>
+
+      <!-- Analyzed message preview -->
+      <div class="preview-section">
+        <h4>📝 Analyzed Message</h4>
+        <div class="preview-bubble" id="previewBubble"></div>
+      </div>
+
+      <!-- Safety Recommendations -->
+      <div class="tips-section">
+        <h4>🛡️ Safety Recommendations</h4>
+        <div id="tipsList" class="tips-list"></div>
+      </div>
+    </section>
+
+    <footer class="site-footer hidden" id="siteFooter">
+      <div class="footer-inner">
+        <div class="team-panel">
+          <div class="team-panel-head">
+            <div class="team-title">🛡️ CODER DARJI</div>
+            <div class="team-sub">AI-Powered Scam Detection</div>
+          </div>
+          <div class="team-grid">
+            <div class="member-card">
+              <div class="member-role">COMMAND NODE · LEAD OPERATOR</div>
+              <div class="member-name">K. Rohan Achary</div>
+              <div class="member-links">
+                <a class="m-link" href="mailto:rohanachary@gmail.com">› Gmail</a>
+                <a class="m-link" href="https://github.com/" target="_blank" rel="noreferrer">› GitHub</a>
+                <a class="m-link" href="https://linkedin.com/" target="_blank" rel="noreferrer">› LinkedIn</a>
+              </div>
+            </div>
+            <div class="member-card">
+              <div class="member-role">INTERFACE UNIT · UI/UX ARCHITECT</div>
+              <div class="member-name">Prasoon Sahoo</div>
+              <div class="member-links">
+                <a class="m-link" href="mailto:prasoon.sahoo@gmail.com">› Gmail</a>
+                <a class="m-link" href="https://github.com/" target="_blank" rel="noreferrer">› GitHub</a>
+                <a class="m-link" href="https://linkedin.com/" target="_blank" rel="noreferrer">› LinkedIn</a>
+              </div>
+            </div>
+            <div class="member-card">
+              <div class="member-role">SERVER CORE · API ENGINEER</div>
+              <div class="member-name">Anshuvrit Pradhan</div>
+              <div class="member-links">
+                <a class="m-link" href="mailto:anshuvritpradhan@gmail.com">› Gmail</a>
+                <a class="m-link" href="https://github.com/" target="_blank" rel="noreferrer">› GitHub</a>
+                <a class="m-link" href="https://linkedin.com/" target="_blank" rel="noreferrer">› LinkedIn</a>
+              </div>
+            </div>
+            <div class="member-card">
+              <div class="member-role">NEURAL LAB · LLM/AI TRAINER</div>
+              <div class="member-name">Dibyajyoti Dibyadarshan Mohapatra</div>
+              <div class="member-links">
+                <a class="m-link" href="mailto:dibyajyoti.mohapatra@gmail.com">› Gmail</a>
+                <a class="m-link" href="https://github.com/" target="_blank" rel="noreferrer">› GitHub</a>
+                <a class="m-link" href="https://linkedin.com/" target="_blank" rel="noreferrer">› LinkedIn</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="f-bottom">© 2026 Coder Darji — Protecting the Digital World</div>
+    </footer>
+
+  </main>
+
+  <script>
+    window.SERVER_RESULT = {
+      hasResult: {{ 'true' if status else 'false' }},
+      message: {{ (message or '')|tojson }},
+      status: {{ (status or '')|tojson }},
+      probability: {{ (probability or 0) }},
+      risk_level: {{ (risk_level or '')|tojson }},
+      scam_type: {{ (scam_type or '')|tojson }},
+      scam_goal: {{ (scam_goal or '')|tojson }},
+      what_to_do: {{ (what_to_do or '')|tojson }},
+      how_to_avoid: {{ (how_to_avoid or '')|tojson }},
+      highlights: {{ (highlights or [])|tojson }},
+      is_uncertain: {{ 'true' if is_uncertain else 'false' }},
+      followup_questions: {{ (followup_questions or [])|tojson }}
+    };
+  </script>
+
+  <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
